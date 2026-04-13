@@ -8,7 +8,7 @@
 </head>
 <body>
     <div id="start-screen">
-        <button id="start-btn">Click to Open Your Heart</button>
+        <button id="start-btn">Click to Open My Heart</button>
     </div>
 
     <div class="frame"></div>
@@ -22,6 +22,12 @@
     <audio id="bg-music" loop>
         <source src="music.mp3" type="audio/mpeg">
     </audio>
+    <div id="quiz-container">
+    <div id="question" class="question-text">Ready for a surprise, Sam?</div>
+    <div id="options" class="btn-group">
+        <button class="quiz-btn" onclick="startQuiz()">Yes!</button>
+    </div>
+</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="script.js"></script>

@@ -1,153 +1,144 @@
-// --- 1. START SCREEN & AUDIO ---
+// --- 1. GLOBAL VARIABLES ---
+let scene, camera, renderer, heartMesh, bgMusic;
+let targetScale = 1;
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
-const bgMusic = document.getElementById('bg-music');
-
-startBtn.addEventListener('click', () => {
-    startScreen.style.opacity = '0';
-    setTimeout(() => startScreen.remove(), 1000);
-    bgMusic.play();
-});
-
-// --- 2. THREE.JS 3D CRYSTAL HEART ---
-const container = document.getElementById('canvas-container');
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-container.appendChild(renderer.domElement);
-
-// Create Heart Shape
-const x = 0, y = 0;
-const heartShape = new THREE.Shape();
-heartShape.moveTo( x + 5, y + 5 );
-heartShape.bezierCurveTo( x + 5, y + 5, x + 4, y, x, y );
-heartShape.bezierCurveTo( x - 6, y, x - 6, y + 7, x - 6, y + 7 );
-heartShape.bezierCurveTo( x - 6, y + 11, x - 3, y + 15.4, x + 5, y + 19 );
-heartShape.bezierCurveTo( x + 12, y + 15.4, x + 16, y + 11, x + 16, y + 7 );
-heartShape.bezierCurveTo( x + 16, y + 7, x + 16, y, x + 10, y );
-heartShape.bezierCurveTo( x + 7, y, x + 5, y + 5, x + 5, y + 5 );
-
-const extrudeSettings = { depth: 2, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 1, bevelThickness: 1 };
-const geometry = new THREE.ExtrudeGeometry( heartShape, extrudeSettings );
-geometry.center(); 
-geometry.rotateZ(Math.PI);
-geometry.scale(0.15, 0.15, 0.15);
-
-// Interactive Colors
-const heartColors = [0xff4da6, 0xff0000, 0x9400d3, 0xffffff];
-let currentColorIndex = 0;
-
-const material = new THREE.MeshPhongMaterial({
-    color: heartColors[currentColorIndex],
-    emissive: 0x220011,
-    shininess: 200,
-    flatShading: true
-});
-
-const heartMesh = new THREE.Mesh(geometry, material);
-scene.add(heartMesh);
-
-// Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(1, 1, 5);
-scene.add(directionalLight);
-
-camera.position.z = 7;
-
-// --- 3. INTERACTION LOGIC (Mouse & Click) ---
-let mouseX = 0;
-let mouseY = 0;
-let targetScale = 1;
-
-window.addEventListener('mousemove', (event) => {
-    // Calculate mouse position relative to center (-1 to 1)
-    mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-    mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-});
-
-window.addEventListener('mousedown', () => {
-    // 1. Change color on click
-    currentColorIndex = (currentColorIndex + 1) % heartColors.length;
-    heartMesh.material.color.setHex(heartColors[currentColorIndex]);
-    
-    // 2. Immediate Pulse
-    targetScale = 1.8;
-    setTimeout(() => targetScale = 1, 200);
-
-    // 3. Create a burst of phrases/particles
-    for(let i = 0; i < 5; i++) {
-        setTimeout(createFloatingPhrase, i * 100);
-    }
-});
-
-// --- 4. BACKGROUND PARTICLES & FLOWING TEXT ---
-const canvas = document.getElementById('bg-canvas');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
+const bgCanvas = document.getElementById('bg-canvas');
+const ctx = bgCanvas.getContext('2d');
 const particles = [];
-for (let i = 0; i < 150; i++) {
-    particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 2 + 1,
-        speed: Math.random() * 0.5 + 0.2,
-        color: '#ffb6c1'
+
+// --- 2. INITIALIZE SCENE ---
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 12;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // Create Heart
+    const shape = new THREE.Shape();
+    shape.moveTo(25, 25);
+    shape.bezierCurveTo(25, 25, 20, 0, 0, 0);
+    shape.bezierCurveTo(-30, 0, -30, 35, -30, 35);
+    shape.bezierCurveTo(-30, 55, -10, 77, 25, 95);
+    shape.bezierCurveTo(60, 77, 80, 55, 80, 35);
+    shape.bezierCurveTo(80, 35, 80, 0, 50, 0);
+    shape.bezierCurveTo(35, 0, 25, 25, 25, 25);
+
+    const extrudeSettings = { depth: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 };
+    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geometry.center();
+    geometry.rotateZ(Math.PI); 
+
+    const material = new THREE.MeshPhongMaterial({
+        color: 0xff4da6,
+        shininess: 100,
+        flatShading: true
     });
+
+    heartMesh = new THREE.Mesh(geometry, material);
+    heartMesh.scale.set(0.08, 0.08, 0.08); // Scaled for mobile
+    scene.add(heartMesh);
+
+    // Lighting
+    const light1 = new THREE.DirectionalLight(0xffffff, 1);
+    light1.position.set(1, 1, 5);
+    scene.add(light1);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+    // Particle Setup
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+    for (let i = 0; i < 100; i++) {
+        particles.push({
+            x: Math.random() * bgCanvas.width,
+            y: Math.random() * bgCanvas.height,
+            size: Math.random() * 2 + 1,
+            speed: Math.random() * 0.5 + 0.2
+        });
+    }
+
+    animate();
 }
 
-function drawParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// --- 3. ANIMATION & PARTICLES ---
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (heartMesh) {
+        heartMesh.rotation.y += 0.01;
+        // Heartbeat
+        const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.08;
+        const finalScale = pulse * targetScale;
+        heartMesh.scale.set(0.08 * finalScale, 0.08 * finalScale, 0.08 * finalScale);
+    }
+
+    // Draw Stars
+    ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    ctx.fillStyle = "white";
     particles.forEach(p => {
-        ctx.fillStyle = p.color;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
         p.y -= p.speed;
-        if (p.y < -10) p.y = canvas.height + 10;
+        if (p.y < 0) p.y = bgCanvas.height;
+    });
+
+    renderer.render(scene, camera);
+}
+
+// --- 4. QUIZ LOGIC ---
+const questions = [
+    { q: "Do you know how much I love you?", opts: ["A lot", "Infinity", "No🤮🤮🤮"], next: 1 },
+    { q: "Favorite thing about us?", opts: ["Nothing", "Everything"], next: 2 },
+    { q: "Ready for forever, Sam?", opts: ["Yes!", "Absolutely", "Never love U🤮🤮🤮"], next: null }
+];
+let currentQ = 0;
+
+function showQuestion() {
+    const qData = questions[currentQ];
+    document.getElementById('question').innerText = qData.q;
+    const opts = document.getElementById('options');
+    opts.innerHTML = '';
+    
+    qData.opts.forEach(o => {
+        const b = document.createElement('button');
+        b.className = 'quiz-btn';
+        b.innerText = o;
+        b.onclick = () => {
+            targetScale = 1.5; // Visual feedback
+            setTimeout(() => targetScale = 1, 200);
+            if(qData.next !== null) {
+                currentQ = qData.next;
+                showQuestion();
+            } else {
+                document.getElementById('question').innerText = "I love you Sam! ❤️";
+                opts.innerHTML = '';
+            }
+        };
+        opts.appendChild(b);
     });
 }
 
-const lovePhrases = ["I love Sam", "Sam + Me", "Forever", "You're my world", "❤️", "My Crystal Heart"];
+// --- 5. START UP ---
+startBtn.addEventListener('click', () => {
+    startScreen.style.display = 'none';
+    document.getElementById('bg-music').play();
+    document.getElementById('quiz-container').style.display = 'block';
+    showQuestion();
+});
 
-function createFloatingPhrase() {
-    if(startScreen.style.opacity !== '0') return; 
-    const phraseEl = document.createElement("div");
-    phraseEl.classList.add("floating-phrase");
-    phraseEl.innerText = lovePhrases[Math.floor(Math.random() * lovePhrases.length)];
-    phraseEl.style.left = `${Math.floor(Math.random() * 80) + 10}vw`;
-    document.body.appendChild(phraseEl);
-    setTimeout(() => { phraseEl.remove(); }, 8000);
-}
-setInterval(createFloatingPhrase, 2500);
+// Run Init
+init();
 
-// --- 5. ANIMATION LOOP ---
-function animate() {
-    requestAnimationFrame(animate);
-
-    // Interaction 1: Heart follows mouse slightly
-    heartMesh.rotation.y += 0.01 + (mouseX * 0.05);
-    heartMesh.rotation.x = (mouseY * 0.5);
-
-    // Interaction 2: Smooth Heartbeat + Click Pulse
-    const time = Date.now() * 0.003;
-    const basePulse = 1 + Math.sin(time) * 0.08; 
-    const finalScale = basePulse * targetScale;
-    heartMesh.scale.set(finalScale, finalScale, finalScale);
-
-    drawParticles();
-    renderer.render(scene, camera);
-}
-animate();
-
+// Resize Handler
 window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
 });

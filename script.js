@@ -1,24 +1,51 @@
-// --- 1. GLOBAL VARIABLES ---
-let scene, camera, renderer, heartMesh, bgMusic;
+// --- 1. CONFIGURATION & DATA ---
+const questions = [
+    { 
+        q: "First things first... do you know who this is for?", 
+        opts: ["Me? (Sam)", "The most special girl"], 
+        next: 1 
+    },
+    { 
+        q: "What's our 'vibe' as a couple?", 
+        opts: ["Total chaos", "Pure romance", "Best girl-friend"], 
+        next: 2 
+    },
+    { 
+        q: "If I could give you anything right now, what would it be?", 
+        opts: ["A huge hug", "A million kisses", "The whole world"], 
+        next: 3 
+    },
+    { 
+        q: "Will you stay by my side through everything?", 
+        opts: ["Yes", "Always & Forever"], 
+        next: 4 
+    },
+    { 
+        q: "Did this crystal heart make you smile today?", 
+        opts: ["Yes, a lot!", "It's perfect"], 
+        next: null 
+    }
+];
+
+let scene, camera, renderer, heartMesh;
+let currentQ = 0;
 let targetScale = 1;
-const startScreen = document.getElementById('start-screen');
-const startBtn = document.getElementById('start-btn');
+const particles = [];
 const bgCanvas = document.getElementById('bg-canvas');
 const ctx = bgCanvas.getContext('2d');
-const particles = [];
 
-// --- 2. INITIALIZE SCENE ---
-function init() {
+// --- 2. THE 3D ENGINE (THREE.JS) ---
+function initThreeJS() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 12;
+    camera.position.z = 15;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // Create Heart
+    // Create the Crystal Heart Geometry
     const shape = new THREE.Shape();
     shape.moveTo(25, 25);
     shape.bezierCurveTo(25, 25, 20, 0, 0, 0);
@@ -28,57 +55,63 @@ function init() {
     shape.bezierCurveTo(80, 35, 80, 0, 50, 0);
     shape.bezierCurveTo(35, 0, 25, 25, 25, 25);
 
-    const extrudeSettings = { depth: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 };
+    const extrudeSettings = { depth: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 2, bevelThickness: 2 };
     const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     geometry.center();
     geometry.rotateZ(Math.PI); 
 
     const material = new THREE.MeshPhongMaterial({
         color: 0xff4da6,
+        emissive: 0x220011,
         shininess: 100,
-        flatShading: true
+        flatShading: true // Gives it the crystal look
     });
 
     heartMesh = new THREE.Mesh(geometry, material);
-    heartMesh.scale.set(0.08, 0.08, 0.08); // Scaled for mobile
+    
+    // Adaptive scaling for mobile
+    const startScale = window.innerWidth < 600 ? 0.07 : 0.1;
+    heartMesh.scale.set(startScale, startScale, startScale);
     scene.add(heartMesh);
 
-    // Lighting
+    // Lights
     const light1 = new THREE.DirectionalLight(0xffffff, 1);
     light1.position.set(1, 1, 5);
     scene.add(light1);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-    // Particle Setup
+    // Initialize Particles
     bgCanvas.width = window.innerWidth;
     bgCanvas.height = window.innerHeight;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 120; i++) {
         particles.push({
             x: Math.random() * bgCanvas.width,
             y: Math.random() * bgCanvas.height,
             size: Math.random() * 2 + 1,
-            speed: Math.random() * 0.5 + 0.2
+            speed: Math.random() * 0.4 + 0.1
         });
     }
 
     animate();
 }
 
-// --- 3. ANIMATION & PARTICLES ---
+// --- 3. ANIMATION LOOP ---
 function animate() {
     requestAnimationFrame(animate);
 
     if (heartMesh) {
-        heartMesh.rotation.y += 0.01;
-        // Heartbeat
+        heartMesh.rotation.y += 0.012; // Slow elegant spin
+        
+        // Pulse logic
         const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.08;
         const finalScale = pulse * targetScale;
-        heartMesh.scale.set(0.08 * finalScale, 0.08 * finalScale, 0.08 * finalScale);
+        const baseSize = window.innerWidth < 600 ? 0.07 : 0.1;
+        heartMesh.scale.set(baseSize * finalScale, baseSize * finalScale, baseSize * finalScale);
     }
 
-    // Draw Stars
+    // Draw Background
     ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
     particles.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -90,55 +123,53 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// --- 4. QUIZ LOGIC ---
-const questions = [
-    { q: "Do you know how much I love you?", opts: ["A lot", "Infinity", "No🤮🤮🤮"], next: 1 },
-    { q: "Favorite thing about us?", opts: ["Nothing", "Everything"], next: 2 },
-    { q: "Ready for forever, Sam?", opts: ["Yes!", "Absolutely", "Never love U🤮🤮🤮"], next: null }
-];
-let currentQ = 0;
-
+// --- 4. INTERACTIVE QUIZ LOGIC ---
 function showQuestion() {
     const qData = questions[currentQ];
-    document.getElementById('question').innerText = qData.q;
-    const opts = document.getElementById('options');
-    opts.innerHTML = '';
+    const qText = document.getElementById('question');
+    const optsDiv = document.getElementById('options');
     
-    qData.opts.forEach(o => {
-        const b = document.createElement('button');
-        b.className = 'quiz-btn';
-        b.innerText = o;
-        b.onclick = () => {
-            targetScale = 1.5; // Visual feedback
-            setTimeout(() => targetScale = 1, 200);
-            if(qData.next !== null) {
+    qText.innerText = qData.q;
+    optsDiv.innerHTML = '';
+    
+    qData.opts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-btn';
+        btn.innerText = opt;
+        btn.onclick = () => {
+            // Heart reacts to click
+            targetScale = 1.4;
+            setTimeout(() => targetScale = 1, 250);
+
+            if (qData.next !== null) {
                 currentQ = qData.next;
                 showQuestion();
             } else {
-                document.getElementById('question').innerText = "I love you Sam! ❤️";
-                opts.innerHTML = '';
+                qText.innerText = "I love you more than words can say, Sam! ❤️";
+                optsDiv.innerHTML = '';
             }
         };
-        opts.appendChild(b);
+        optsDiv.appendChild(btn);
     });
 }
 
-// --- 5. START UP ---
-startBtn.addEventListener('click', () => {
-    startScreen.style.display = 'none';
+// --- 5. EVENT LISTENERS ---
+document.getElementById('start-btn').addEventListener('click', () => {
+    document.getElementById('start-screen').style.display = 'none';
     document.getElementById('bg-music').play();
     document.getElementById('quiz-container').style.display = 'block';
     showQuestion();
 });
 
-// Run Init
-init();
-
-// Resize Handler
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    bgCanvas.width = window.innerWidth;
-    bgCanvas.height = window.innerHeight;
+    renderer.setSize(w, h);
+    bgCanvas.width = w;
+    bgCanvas.height = h;
 });
+
+// Launch!
+initThreeJS();

@@ -1,0 +1,92 @@
+/* Reset and Full Screen Setup */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #050002; /* Very dark, space-like burgundy/black */
+    overflow: hidden; /* Prevents scrollbars */
+    font-family: 'Arial', sans-serif;
+}
+
+/* The thick pink frame */
+.frame {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 8px solid #ffb6c1; /* Light pink */
+    pointer-events: none; /* Let clicks pass through */
+    z-index: 100;
+}
+
+/* "this is for you" text */
+.main-title {
+    position: absolute;
+    top: 50px;
+    width: 100%;
+    text-align: center;
+    color: #ffb6c1;
+    font-size: 2rem;
+    z-index: 50;
+    letter-spacing: 2px;
+}
+
+/* Start Screen Overlay */
+#start-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    transition: opacity 1s ease;
+}
+
+#start-btn {
+    padding: 15px 30px;
+    font-size: 1.5rem;
+    background-color: #ffb6c1;
+    color: #3a001e;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 0 15px #ffb6c1;
+}
+
+/* Canvases */
+#bg-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 1; /* Background layer */
+}
+
+#canvas-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10; /* Middle 3D layer */
+}
+
+/* Flowing "Sam" Love Phrases */
+.floating-phrase {
+    position: absolute;
+    color: rgba(255, 182, 193, 0.9);
+    font-size: 1.5rem;
+    font-weight: bold;
+    pointer-events: none;
+    text-shadow: 0 0 10px rgba(255, 105, 180, 0.8);
+    animation: floatUp 8s linear forwards;
+    z-index: 20; /* Between the heart and the frame */
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0.8); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+}
